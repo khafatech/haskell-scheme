@@ -2,6 +2,8 @@ module Main where
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
+import Numeric
+import Data.Char
 
 
 
@@ -55,7 +57,7 @@ escape ch = error ("Unsupported escape character: '" ++ [ch] ++ "'")
 slash :: Parser Char
 slash = do
            char '\\'
-           escapeCode <- (oneOf "\"nrt\\")
+           escapeCode <- oneOf "\"nrt\\"
            return $ escape escapeCode
 
 
@@ -77,10 +79,57 @@ parseAtom = do
                         "#f" -> Bool False
                         _    -> Atom atom
 
+---- Parsing numbers
+-- Each number base needs a function to parse its digits (e.g. hexDigit)
+-- and a function to convert a string of digits to an integer
+
+-- getIntBase ::  String -> Integer
+-- This is for the read* functions in Numeric
+getIntBase numReader str = case numReader str of
+              [(n, "")] -> n
+              [(_, extra)] -> error ("Unable to parse digits: " ++ extra)
+              _ -> error ("Unable to parse number: " ++ str)
+
+getOct :: String -> Integer
+getOct = getIntBase readOct
+
+getHex :: String -> Integer
+getHex = getIntBase readHex
+
+
+
+binChToNum :: Char -> Integer
+binChToNum '1' = 1
+binChToNum '0' = 0
+
+getBin :: String -> Integer
+getBin numStr = let numList = map binChToNum numStr
+  -- at each point we're multiplying the current digit by 2 and adding to rest.
+  in foldl (\x y -> 2 * x + y) 0 numList
+
+
+parseNumberBase parseFunc readFunc = liftM (Number . readFunc) $ many1 parseFunc
+
+parseDecNumber :: Parser LispVal
+parseDecNumber = parseNumberBase digit read
+
+binDigit :: Parser Char
+binDigit = oneOf "01"
+
 
 parseNumber :: Parser LispVal
-parseNumber =  (many1 digit)  >>= (\n -> return ((Number . read) n))
+parseNumber = do
+                char '#'
+                base <- oneOf "bBoOdDxX"
+                case (toLower base) of
+                    'b' -> parseNumberBase binDigit getBin
+                    'o' -> parseNumberBase octDigit getOct
+                    'd' -> parseDecNumber
+                    'x' -> parseNumberBase hexDigit getHex
 
+
+-- different ways of writing parseDecNumber.
+-- parseNumber =  (many1 digit)  >>= (\n -> return ((Number . read) n))
 --parseNumber = liftM (Number . read) $ many1 digit
 {-
 parseNumber = do
@@ -89,10 +138,10 @@ parseNumber = do
 -}
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom
+parseExpr = parseNumber
+         <|> parseDecNumber
          <|> parseString
-         <|> parseNumber
-
+         <|> parseAtom
 
 
 readExpr :: String -> String

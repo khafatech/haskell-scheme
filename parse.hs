@@ -13,6 +13,22 @@ data LispVal = Atom String
              | Bool Bool
 
 
+-- this is better done with the 'show' type class
+lispValtoStr :: LispVal -> String
+lispValtoStr (Atom s) = s
+lispValtoStr (String s) = s
+lispValtoStr (Number n) = show n
+
+showEither :: Either ParseError LispVal -> String
+showEither (Left err) = "Error: " ++ show err
+showEither (Right val) = lispValtoStr val
+
+
+-- prints result of parse
+-- e.g.: perr $ parse parseString "myparser" "\"abcdefg\\\\ikjlmn\"" 
+perr either = putStrLn $ showEither either
+
+
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~#"
 
@@ -21,10 +37,32 @@ spaces :: Parser ()
 spaces = skipMany1 space
 
 
+insideString :: Parser [Char]
+insideString = do
+                x <- many (noneOf "\"")
+                return x
+
+
+escape :: Char -> Char
+escape 'n' = '\n'
+escape 'r' = '\r'
+escape 't' = '\t'
+escape '\\' = '\\'
+escape '"' = '"'
+escape ch = error ("Unsupported escape character: '" ++ [ch] ++ "'")
+
+
+slash :: Parser Char
+slash = do
+           char '\\'
+           escapeCode <- (oneOf "\"nrt\\")
+           return $ escape escapeCode
+
+
 parseString :: Parser LispVal
 parseString = do
                 char '"'
-                x <- many (noneOf "\"")
+                x <- many (slash <|> (noneOf "\""))
                 char '"'
                 return $ String x
 

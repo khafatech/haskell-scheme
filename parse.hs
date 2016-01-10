@@ -16,14 +16,26 @@ data LispVal = Atom String
 
 
 -- this is better done with the 'show' type class
-lispValtoStr :: LispVal -> String
-lispValtoStr (Atom s) = s
-lispValtoStr (String s) = s
-lispValtoStr (Number n) = show n
+showVal :: LispVal -> String
+showVal (Atom s) = s
+showVal (String s) = "\"" ++ s ++ "\""
+showVal (Number n) = show n
+showVal (Bool True) = "#t"
+showVal (Bool False) = "#f"
+showVal (List contents) = "(" ++ unwordsList contents ++ ")"
+showVal (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
+
+unwordsList :: [LispVal] -> String
+unwordsList = unwords . map showVal
+
+-- make instance of the Show type class
+instance Show LispVal where show = showVal
+
+
 
 showEither :: Either ParseError LispVal -> String
 showEither (Left err) = "Error: " ++ show err
-showEither (Right val) = lispValtoStr val
+showEither (Right val) = showVal val
 
 
 -- prints result of parse
@@ -39,6 +51,8 @@ spaces :: Parser ()
 spaces = skipMany1 space
 
 
+
+---- String parsing
 insideString :: Parser [Char]
 insideString = do
                 x <- many (noneOf "\"")
@@ -67,6 +81,7 @@ parseString = do
                 x <- many (slash <|> (noneOf "\""))
                 char '"'
                 return $ String x
+
 
 
 parseAtom :: Parser LispVal
@@ -137,11 +152,18 @@ parseNumber = do
                 return $ ((Number . read) num)
 -}
 
+
+
+
 parseExpr :: Parser LispVal
 parseExpr = parseNumber
          <|> parseDecNumber
          <|> parseString
          <|> parseAtom
+
+
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
 
 
 readExpr :: String -> String

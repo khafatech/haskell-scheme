@@ -160,16 +160,38 @@ parseExpr = parseNumber
          <|> parseDecNumber
          <|> parseString
          <|> parseAtom
+         <|> parseQuoted
+         <|> do char '('
+                x <- try parseList <|> parseDottedList
+                char ')'
+                return x
 
 
 parseList :: Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
 
 
+-- (a b c . d)
+parseDottedList :: Parser LispVal
+parseDottedList = do
+                    head <- endBy parseExpr spaces
+                    tail <- char '.' >> spaces >> parseExpr
+                    return $ DottedList head tail
+
+
+
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+                char '\''
+                exp <- parseExpr
+                return $ List [Atom "quote", exp]
+
+
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
     Left err -> "No match: " ++ show err
-    Right val -> "Found value"
+    Right val -> "Found: " ++ show val
 
 
 main :: IO ()

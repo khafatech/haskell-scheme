@@ -145,7 +145,15 @@ parseNumber = do
 
 -- different ways of writing parseDecNumber.
 -- parseNumber =  (many1 digit)  >>= (\n -> return ((Number . read) n))
+--
+
+
+-- liftM :: Monad m => (a1 -> r) -> m a1 -> m r
+-- It takes a function a -> b, and a "Monad a", and applies a to 
+-- the func and returns type "Monad b"
+
 --parseNumber = liftM (Number . read) $ many1 digit
+
 {-
 parseNumber = do
                 num <- many1 digit
@@ -156,19 +164,26 @@ parseNumber = do
 
 
 parseExpr :: Parser LispVal
+--parseExpr = (many spaces) >> (parseNumber
 parseExpr = parseNumber
          <|> parseDecNumber
          <|> parseString
          <|> parseAtom
          <|> parseQuoted
          <|> do char '('
-                x <- try parseList <|> parseDottedList
+                x <- (try parseList) <|> parseDottedList
                 char ')'
                 return x
 
 
 parseList :: Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
+
+{- another way of doing it:
+parseList = liftM List $ do
+                 list <- sepBy parseExpr spaces
+                 return list
+-}
 
 
 -- (a b c . d)
@@ -179,21 +194,62 @@ parseDottedList = do
                     return $ DottedList head tail
 
 
-
-
 parseQuoted :: Parser LispVal
 parseQuoted = do
                 char '\''
                 exp <- parseExpr
                 return $ List [Atom "quote", exp]
 
-
-readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of
+showExpr :: String -> String
+showExpr input = case parse parseExpr "lisp" input of
     Left err -> "No match: " ++ show err
     Right val -> "Found: " ++ show val
 
 
+readExpr :: String -> LispVal
+readExpr input = case parse parseExpr "lisp" input of
+    Left err -> String $ "No match: " ++ show err
+    Right val -> val
+
+
+eval :: LispVal -> LispVal
+eval val@(String _) = val
+eval val@(Number _) = val
+eval val@(Bool _) = val
+eval (List [Atom "quote", val]) = val
+eval (List (Atom func : args)) = apply func $ map eval args
+
+
+evalStr :: String -> LispVal
+evalStr = eval . readExpr
+
+-- lookup is a builtin
+-- apply :: String -> [LispVal] -> LispVal
+-- apply func args = maybe (Bool False) ($ args) $ lookup func primitives
+apply func args = case lookup func primitives of
+            Just f -> f args
+            Nothing -> Bool False
+                
+-- maybe (Bool False) ($ args) $ lookup func primitives
+
+primitives :: [(String, [LispVal] -> LispVal)]
+primitives = [("+", numericBinop (+)),
+              ("-", numericBinop (-)),
+              ("*", numericBinop (*)),
+              ("/", numericBinop div),
+              ("mod", numericBinop mod),
+              ("quotient", numericBinop quot),
+              ("remainder", numericBinop rem)]
+
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
+numericBinop op params = Number $ foldl1 op $  map unpackNum params
+
+-- not doing weak typing
+unpackNum :: LispVal -> Integer
+unpackNum (Number n) = n
+unpackNum _ = 0
+
+
 main :: IO ()
 main = do args <- getArgs
-          putStrLn (readExpr (args !! 0))
+          putStrLn . show . eval . readExpr . (!! 0) $ args

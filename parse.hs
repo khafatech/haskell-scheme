@@ -1,5 +1,6 @@
 module Main where
 import System.Environment
+import System.IO
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
 import Numeric
@@ -212,10 +213,14 @@ readExpr input = case parse parseExpr "lisp" input of
     Right val -> val
 
 
+------------ eval ---------------
+
 eval :: LispVal -> LispVal
 eval val@(String _) = val
 eval val@(Number _) = val
 eval val@(Bool _) = val
+-- TODO - handle function application?
+eval val@(Atom _) = val
 eval (List [Atom "quote", val]) = val
 eval (List (Atom func : args)) = apply func $ map eval args
 
@@ -237,9 +242,17 @@ primitives = [("+", numericBinop (+)),
               ("-", numericBinop (-)),
               ("*", numericBinop (*)),
               ("/", numericBinop div),
+              ("^", numericBinop (^)),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
-              ("remainder", numericBinop rem)]
+              ("remainder", numericBinop rem),
+              ("number?", numberq)
+              ]
+
+
+numberq :: [LispVal] -> LispVal
+numberq [Number _] = Bool True
+numberq [_] = Bool False
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
 numericBinop op params = Number $ foldl1 op $  map unpackNum params
@@ -247,9 +260,21 @@ numericBinop op params = Number $ foldl1 op $  map unpackNum params
 -- not doing weak typing
 unpackNum :: LispVal -> Integer
 unpackNum (Number n) = n
+-- FIXME handle type errors (not a number)
 unpackNum _ = 0
 
 
 main :: IO ()
+{-
 main = do args <- getArgs
           putStrLn . show . eval . readExpr . (!! 0) $ args
+-}
+
+{-
+-- eval stdin
+main = do
+    text <- hGetContents stdin
+    print . eval . readExpr $ text
+-}
+-- or:
+main = hGetContents stdin >>= print . eval . readExpr

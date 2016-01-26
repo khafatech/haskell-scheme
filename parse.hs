@@ -235,6 +235,7 @@ apply func args = case lookup func primitives of
             Just f -> f args
             Nothing -> Bool False
                 
+
 -- maybe (Bool False) ($ args) $ lookup func primitives
 
 primitives :: [(String, [LispVal] -> LispVal)]
@@ -246,13 +247,32 @@ primitives = [("+", numericBinop (+)),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
               ("remainder", numericBinop rem),
-              ("number?", numberq)
+
+              -- TODO: separate these into another list
+              ("number?", testType "number" . head),
+              ("string?", testType "string" . head),
+              ("symbol?", testType "symbol" . head)
               ]
 
 
+testType :: String -> LispVal -> LispVal
+testType "string" (String _) = Bool True
+testType "number" (Number _) = Bool True
+testType "symbol" (List [Atom "quote", _]) = Bool True
+testType _ _ = Bool False
+
+
+{-
 numberq :: [LispVal] -> LispVal
 numberq [Number _] = Bool True
 numberq [_] = Bool False
+
+stringq :: [LispVal] -> LispVal
+stringq [Number _] = Bool True
+stringq [_] = Bool False
+-}
+
+
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
 numericBinop op params = Number $ foldl1 op $  map unpackNum params

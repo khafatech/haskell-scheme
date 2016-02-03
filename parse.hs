@@ -63,6 +63,24 @@ instance Error LispError where
     strMsg = Default
 
 
+-- Currying the Either type constructor.
+type ThrowsError = Either LispError
+
+extractValue :: ThrowsError a -> a
+extractValue (Right val) = val
+
+
+-- this is like an error handler.
+-- action is a result of a monadic computation (e.g. do notation.)
+-- What handler does is show the value and wrap it the monad
+trapError :: (Show e, MonadError e m) => m String -> m String
+trapError action = catchError action (return . show)
+
+
+
+-- End Error defs
+
+
 showEither :: Either ParseError LispVal -> String
 showEither (Left err) = "Error: " ++ show err
 showEither (Right val) = showVal val
@@ -236,9 +254,9 @@ showExpr input = case parse parseExpr "lisp" input of
     Right val -> "Found: " ++ show val
 
 
-readExpr :: String -> LispVal
+readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
-    Left err -> String $ "No match: " ++ show err
+    Left err -> throwError $ "No match: " ++ show err
     Right val -> val
 
 

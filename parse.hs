@@ -64,8 +64,11 @@ instance Error LispError where
 
 
 -- Currying the Either type constructor.
+-- "Either a b" means Left a, Right b
 type ThrowsError = Either LispError
 
+
+-- Now "ThrowsError a", a is the value. The error LispError is embedded in ThrowsError
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val
 
@@ -255,37 +258,38 @@ showExpr input = case parse parseExpr "lisp" input of
 
 
 readExpr :: String -> ThrowsError LispVal
-readExpr input = case parse parseExpr "lisp" input of
-    Left err -> throwError $ "No match: " ++ show err
-    Right val -> val
+readExpr input = case parse parseExpr "lilscheme" input of
+    -- Parser here is a LispError type constructor for a parsing error
+    Left err -> throwError $ Parser err
+    Right val -> return val
 
 
 ------------ eval ---------------
 
-eval :: LispVal -> LispVal
-eval val@(String _) = val
-eval val@(Number _) = val
-eval val@(Bool _) = val
+eval :: LispVal -> ThrowsError LispVal
+eval val@(String _) = return val
+eval val@(Number _) = return val
+eval val@(Bool _) = return val
 -- TODO - handle function application?
-eval val@(Atom _) = val
-eval (List [Atom "quote", val]) = val
-eval (List (Atom func : args)) = apply func $ map eval args
+eval val@(Atom _) = return val
+eval (List [Atom "quote", val]) = return val
+eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval badform = throwError $ BadSpecialForm "Unrecognized special form" badform
 
 
-evalStr :: String -> LispVal
-evalStr = eval . readExpr
 
 -- lookup is a builtin
 -- apply :: String -> [LispVal] -> LispVal
 -- apply func args = maybe (Bool False) ($ args) $ lookup func primitives
+apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = case lookup func primitives of
             Just f -> f args
-            Nothing -> Bool False
+            Nothing -> throwError $ NotFunction "Not a primitive function" func
                 
 
 -- maybe (Bool False) ($ args) $ lookup func primitives
 
-primitives :: [(String, [LispVal] -> LispVal)]
+primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [("+", numericBinop (+)),
               ("-", numericBinop (-)),
               ("*", numericBinop (*)),
@@ -302,11 +306,11 @@ primitives = [("+", numericBinop (+)),
               ]
 
 
-testType :: String -> LispVal -> LispVal
-testType "string" (String _) = Bool True
-testType "number" (Number _) = Bool True
-testType "symbol" (List [Atom "quote", _]) = Bool True
-testType _ _ = Bool False
+testType :: String -> LispVal -> ThrowsError LispVal
+testType "string" (String _) = return $ Bool True
+testType "number" (Number _) = return $ Bool True
+testType "symbol" (List [Atom "quote", _]) = return $ Bool True
+testType _ _ = return $ Bool False
 
 
 {-
@@ -320,18 +324,31 @@ stringq [_] = Bool False
 -}
 
 
+-- FIXME - in r5rs, racket and clojure, * and + can accept 0 and 1 args
+--      (-) and / can accept 1 arg. e.g. (- 4) == -4
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
+numericBinop op [] = throwError $ NumArgs 2 []
+numericBinop op oneVal@[_] = throwError $ NumArgs 2 oneVal
+-- non-monadic
+-- numericBinop op params = Number $ foldl1 op $  map unpackNum params
+-- monadic
+numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
 
-numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
-numericBinop op params = Number $ foldl1 op $  map unpackNum params
 
 -- not doing weak typing
-unpackNum :: LispVal -> Integer
-unpackNum (Number n) = n
+unpackNum :: LispVal -> ThrowsError Integer
+unpackNum (Number n) = return n
 -- FIXME handle type errors (not a number)
-unpackNum _ = 0
+unpackNum notNum = throwError $ TypeMismatch "number" notNum
 
 
-main :: IO ()
+-- evalStr :: String -> IO ()
+evalStr input = do
+    -- evaled <- return $ liftM show $ readExpr input >>= eval
+    -- putStrLn $ extractValue $ trapError evaled
+    readExpr input >>= eval
+
+
 {-
 main = do args <- getArgs
           putStrLn . show . eval . readExpr . (!! 0) $ args
@@ -344,4 +361,12 @@ main = do
     print . eval . readExpr $ text
 -}
 -- or:
-main = hGetContents stdin >>= print . eval . readExpr
+-- main :: IO ()
+-- main = hGetContents stdin >>= print . eval . readExpr
+
+main :: IO ()
+main = do
+    input <- hGetContents stdin
+    -- this below executes within an IO (Either LispError String) action.
+    evaled <- return $ liftM show $ readExpr input >>= eval
+    putStrLn $ extractValue $ trapError evaled

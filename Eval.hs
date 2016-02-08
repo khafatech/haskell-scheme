@@ -74,11 +74,8 @@ numericBinop op oneVal@[_] = throwError $ NumArgs 2 oneVal
 -- monadic
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
 
-
--- not doing weak typing
 unpackNum :: LispVal -> ThrowsError Integer
 unpackNum (Number n) = return n
--- FIXME handle type errors (not a number)
 unpackNum notNum = throwError $ TypeMismatch "number" notNum
 
 

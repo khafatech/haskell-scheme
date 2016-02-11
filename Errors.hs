@@ -46,6 +46,7 @@ extractValue (Right val) = val
 -- this is like an error handler.
 -- action is a result of a monadic computation (e.g. do notation.)
 -- What handler does is show the value and wrap it the monad
+-- catchError :: m a -> (e -> m a) -> m a
 trapError :: (Show e, MonadError e m) => m String -> m String
 trapError action = catchError action (return . show)
 

@@ -6,6 +6,7 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+             deriving Eq
 
 
 -- this is better done with the 'show' type class
@@ -23,4 +24,6 @@ unwordsList = unwords . map showVal
 
 -- make instance of the Show type class
 instance Show LispVal where show = showVal
+
+-- instance Eq LispVal where show = showVal
 

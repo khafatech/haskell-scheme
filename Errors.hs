@@ -1,11 +1,17 @@
-module Errors where
+module Errors ( LispError(..)
+              , ThrowsError(..)
+              , throwError
+              , trapError
+              , extractValue
+              ) where
 
-import Control.Monad.Error
-
+import Control.Monad.Except (throwError, catchError, MonadError)
 import Text.ParserCombinators.Parsec
-
 import Types
 
+
+-- for an example of how to use a custom error data type, see
+-- See https://hackage.haskell.org/package/mtl-2.2.1/docs/Control-Monad-Except.html#g:3
 
 data LispError = NumArgs Integer [LispVal]
                | TypeMismatch String LispVal
@@ -28,10 +34,12 @@ showError (Parser parseErr)             = "Parse error at " ++ show parseErr
 
 instance Show LispError where show = showError
 
+{-
+ - --this isn't needed
 instance Error LispError where
     noMsg = Default "An error has occured"
     strMsg = Default
-
+-}
 
 -- Currying the Either type constructor.
 -- "Either a b" means Left a, Right b

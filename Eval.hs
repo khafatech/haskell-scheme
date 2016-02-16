@@ -1,8 +1,5 @@
 module Eval where
 
--- TODO: could this be exporeted from Errors.hs?
-import Control.Monad.Error (throwError)
-
 import Types
 import Errors
 
@@ -39,6 +36,23 @@ primitives = [("+", numericBinop (+)),
               ("quotient", numericBinop quot),
               ("remainder", numericBinop rem),
 
+              -- FIXME in r5rs, these work with two or more args
+              ("=", numBoolBinop (==)),
+              ("<", numBoolBinop (<)),
+              (">", numBoolBinop (>)),
+              ("/=", numBoolBinop (/=)),
+              (">=", numBoolBinop (>=)),
+              ("<=", numBoolBinop (<=)),
+
+              ("&&", boolBoolBinop (&&)),
+              ("||", boolBoolBinop (||)),
+
+              ("string=?", strBoolBinop (==)),
+              ("string<?", strBoolBinop (<)),
+              ("string>?", strBoolBinop (>)),
+              ("string<=?", strBoolBinop (<=)),
+              ("string>=?", strBoolBinop (>=)),
+
               -- TODO: separate these into another list
               ("number?", testType "number" . head),
               ("string?", testType "string" . head),
@@ -74,8 +88,27 @@ numericBinop op oneVal@[_] = throwError $ NumArgs 2 oneVal
 -- monadic
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
 
+
+boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
+boolBinop unpacker op [leftVal, rightVal] = do
+                        left <- unpacker leftVal
+                        right <- unpacker rightVal
+                        return $ Bool $ left `op` right
+
+boolBinop unpacker op args = throwError $ NumArgs 2 args
+
+numBoolBinop = boolBinop unpackNum
+strBoolBinop = boolBinop unpackStr
+boolBoolBinop = boolBinop unpackBool
+
+unpackStr :: LispVal -> ThrowsError String
+unpackStr (String s) = return s
+unpackStr notStr = throwError $ TypeMismatch "string" notStr
+
 unpackNum :: LispVal -> ThrowsError Integer
 unpackNum (Number n) = return n
 unpackNum notNum = throwError $ TypeMismatch "number" notNum
 
-
+unpackBool :: LispVal -> ThrowsError Bool
+unpackBool (Bool b) = return b
+unpackBool notBool = throwError $ TypeMismatch "boolean" notBool

@@ -1,8 +1,6 @@
 module Parse where
 
 import Control.Monad
--- TODO: could this be exporeted from Errors.hs?
-import Control.Monad.Error (throwError)
 import Numeric
 import Data.Char
 
@@ -35,12 +33,15 @@ insideString = do
                 return x
 
 
+-- 𐤌𐤉 𐤀𐤕 𐤊𐤋 𐤀𐤃𐤌 𐤀𐤔 𐤕𐤐𐤒 𐤀𐤉𐤕 𐤇𐤀𐤓𐤍
+
 escape :: Char -> Char
 escape 'n' = '\n'
 escape 'r' = '\r'
 escape 't' = '\t'
 escape '\\' = '\\'
 escape '"' = '"'
+escape '𐤌' = 'c'
 escape ch = error ("Unsupported escape character: '" ++ [ch] ++ "'")
 
 

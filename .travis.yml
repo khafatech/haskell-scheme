@@ -1,0 +1,10 @@
+ghc: 7.6
+
+install:
+    - cabal install parsec
+    - cabal install tasty tasty-quickcheck
+    - ghc repl.hs
+
+script:
+    - ghc test.hs
+    - ./test

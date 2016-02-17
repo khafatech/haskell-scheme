@@ -134,11 +134,12 @@ parseNumber = do
 
 
 
+-- FIXME ambiguity between parseAtom and parseNumber 
 parseExpr :: Parser LispVal
-parseExpr = parseNumber
-         <|> parseDecNumber
-         <|> parseString
+parseExpr = parseDecNumber
          <|> parseAtom
+         <|> parseNumber
+         <|> parseString
          <|> parseQuoted
          <|> do char '('
                 x <- (try parseList) <|> parseDottedList

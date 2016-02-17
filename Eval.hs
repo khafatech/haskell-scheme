@@ -10,6 +10,13 @@ eval val@(Bool _) = return val
 -- TODO - handle function application?
 eval val@(Atom _) = return val
 eval (List [Atom "quote", val]) = return val
+eval (List [Atom "if", pred, thenp, elsep]) = do
+        case (eval pred) of
+            Right (Bool False) -> eval elsep
+            Right _ -> eval thenp
+            Left err -> throwError $ err
+
+
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badform = throwError $ BadSpecialForm "Unrecognized special form" badform
 

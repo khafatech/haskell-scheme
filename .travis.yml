@@ -1,5 +1,6 @@
 ghc: 7.6
 
+# TODO - use cabal or stack to compile & test
 install:
     - cabal install parsec
     - cabal install tasty tasty-quickcheck

@@ -7,7 +7,7 @@ install:
     - cabal install parsec
     - cabal install tasty tasty-quickcheck
     - ghc repl.hs
+    - ghc test.hs
 
 script:
-    - ghc test.hs
     - ./test

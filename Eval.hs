@@ -34,10 +34,13 @@ apply func args = case lookup func primitives of
 -- maybe (Bool False) ($ args) $ lookup func primitives
 
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
-primitives = [("+", numericBinop (+)),
+primitives = [("+", numericBinopZeroArg (+) 0),
+              ("*", numericBinopZeroArg (*) 1),
+
+              -- FIXME: these should work with 1 arg or more.
               ("-", numericBinop (-)),
-              ("*", numericBinop (*)),
               ("/", numericBinop div),
+
               ("^", numericBinop (^)),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
@@ -85,16 +88,22 @@ stringq [_] = Bool False
 -}
 
 
--- non-monadic
--- numericBinop op params = Number $ foldl1 op $  map unpackNum params
---
--- FIXME - in r5rs, racket and clojure, * and + can accept 0 and 1 args
+-- in rnrs, racket and clojure, * and + can accept 0 and 1 args
 --      (-) and / can accept 1 arg. e.g. (- 4) == -4
+numericBinopZeroArg :: (Integer -> Integer -> Integer) -> Integer -> [LispVal] -> ThrowsError LispVal
+numericBinopZeroArg _ base [] = return $ Number base
+numericBinopZeroArg op base params = mapM unpackNum params >>= return . Number . foldl op base
+
+numericAdd = numericBinopZeroArg (+) 0
+numericMul = numericBinopZeroArg (*) 1
+
+
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop _ [] = throwError $ NumArgs 2 []
 numericBinop _ oneVal@[_] = throwError $ NumArgs 2 oneVal
--- monadic
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
+-- non-monadic:
+-- numericBinop op params = Number $ foldl1 op $  map unpackNum params
 
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal

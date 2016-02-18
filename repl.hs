@@ -1,5 +1,5 @@
 module Main where
-import System.Environment
+-- import System.Environment
 import System.IO
 import Control.Monad
 
@@ -10,7 +10,7 @@ import Eval
 
 
 
--- evalStr :: String -> IO ()
+evalStr :: String -> ThrowsError LispVal
 evalStr input = do
     -- evaled <- return $ liftM show $ readExpr input >>= eval
     -- putStrLn $ extractValue $ trapError evaled

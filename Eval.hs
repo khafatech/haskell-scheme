@@ -85,13 +85,14 @@ stringq [_] = Bool False
 -}
 
 
+-- non-monadic
+-- numericBinop op params = Number $ foldl1 op $  map unpackNum params
+--
 -- FIXME - in r5rs, racket and clojure, * and + can accept 0 and 1 args
 --      (-) and / can accept 1 arg. e.g. (- 4) == -4
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
-numericBinop op [] = throwError $ NumArgs 2 []
-numericBinop op oneVal@[_] = throwError $ NumArgs 2 oneVal
--- non-monadic
--- numericBinop op params = Number $ foldl1 op $  map unpackNum params
+numericBinop _ [] = throwError $ NumArgs 2 []
+numericBinop _ oneVal@[_] = throwError $ NumArgs 2 oneVal
 -- monadic
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
 

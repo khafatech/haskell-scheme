@@ -11,13 +11,6 @@ import Types
 import Errors
 
 
-showEither :: Either ParseError LispVal -> String
-showEither (Left err) = "Error: " ++ show err
-showEither (Right val) = showVal val
-
--- prints result of parse
--- e.g.: perr $ parse parseString "myparser" "\"abcdefg\\\\ikjlmn\"" 
-perr either = putStrLn $ showEither either
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~#"
@@ -25,13 +18,12 @@ symbol = oneOf "!$%&|*+-/:<=>?@^_~#"
 spaces :: Parser ()
 spaces = skipMany1 space
 
-
 ---- String parsing ----
+--
 insideString :: Parser [Char]
 insideString = do
                 x <- many (noneOf "\"")
                 return x
-
 
 -- 𐤌𐤉 𐤀𐤕 𐤊𐤋 𐤀𐤃𐤌 𐤀𐤔 𐤕𐤐𐤒 𐤀𐤉𐤕 𐤇𐤀𐤓𐤍
 
@@ -76,9 +68,11 @@ parseAtom = do
 
 -- getIntBase ::  String -> Integer
 -- This is for the read* functions in Numeric
+getIntBase :: (String -> [(Integer, String)]) -> String -> Integer
 getIntBase numReader str = case numReader str of
               [(n, "")] -> n
               [(_, extra)] -> error ("Unable to parse digits: " ++ extra)
+              -- FIXME - use Either for error handling
               _ -> error ("Unable to parse number: " ++ str)
 
 getOct :: String -> Integer
@@ -91,6 +85,8 @@ getHex = getIntBase readHex
 binChToNum :: Char -> Integer
 binChToNum '1' = 1
 binChToNum '0' = 0
+binChToNum _ = error("FIXME")
+
 
 binDigit :: Parser Char
 binDigit = oneOf "01"

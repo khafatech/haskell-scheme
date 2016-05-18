@@ -66,7 +66,11 @@ primitives = [("+", numericBinopZeroArg (+) 0),
               -- TODO: separate these into another list
               ("number?", testType "number" . head),
               ("string?", testType "string" . head),
-              ("symbol?", testType "symbol" . head)
+              ("symbol?", testType "symbol" . head),
+
+              ("car", car),
+              ("cdr", cdr),
+              ("cons", cons)
               ]
 
 
@@ -130,13 +134,41 @@ unpackBool :: LispVal -> ThrowsError Bool
 unpackBool (Bool b) = return b
 unpackBool notBool = throwError $ TypeMismatch "boolean" notBool
 
--- car takes in a list of LispVals since car can potentially take multiple
+
+-- car, cdr, and cons -----------------------
+--
+-- car takes in a list of LispVals since car can syntactically take multiple
 -- arguments. e.g. if it was called with
 -- (car '(1 2) '(3 4)). In this case, it would throw an error.
 car :: [LispVal] -> ThrowsError LispVal
 car [List (x : xs)]         = return x
 car [DottedList (x : xs) _] = return x
 car [badArg]                = throwError $ TypeMismatch "pair" badArg
-car badArgList                  = throwError $ NumArgs 1 badArgList
+car badArgList              = throwError $ NumArgs 1 badArgList
+
+
+cdr :: [LispVal] -> ThrowsError LispVal
+cdr [List (x : xs)]         = return $ List xs
+cdr [DottedList [_] x]      = return x
+cdr [DottedList (_ : xs) x] = return $ DottedList xs x
+cdr [badArg]                = throwError $ TypeMismatch "pair" badArg
+cdr badArgList              = throwError $ NumArgs 1 badArgList
+
+
+cons :: [LispVal] -> ThrowsError LispVal
+-- (cons a nil) => (a)
+cons [x1, List []] = return $ List [x1]
+-- (cons a list) => (a)
+cons [x, List xs] = return $ List (x:xs)
+
+-- DottedList should stay DottedList
+cons [x, DottedList xs xlast] = return $ DottedList (x : xs) xlast
+
+-- consing two non-lists makes a DottedList
+cons [x1, x2] = return $ DottedList [x1] x2
+
+cons badArgList = throwError $ NumArgs 2 badArgList
+
+
 
 

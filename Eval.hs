@@ -129,3 +129,14 @@ unpackNum notNum = throwError $ TypeMismatch "number" notNum
 unpackBool :: LispVal -> ThrowsError Bool
 unpackBool (Bool b) = return b
 unpackBool notBool = throwError $ TypeMismatch "boolean" notBool
+
+-- car takes in a list of LispVals since car can potentially take multiple
+-- arguments. e.g. if it was called with
+-- (car '(1 2) '(3 4)). In this case, it would throw an error.
+car :: [LispVal] -> ThrowsError LispVal
+car [List (x : xs)]         = return x
+car [DottedList (x : xs) _] = return x
+car [badArg]                = throwError $ TypeMismatch "pair" badArg
+car badArgList                  = throwError $ NumArgs 1 badArgList
+
+

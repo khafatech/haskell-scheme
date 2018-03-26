@@ -37,6 +37,16 @@ expectedExprs =
 
     ]
 
+testAtoms = 
+    [
+      ("abc", Atom "abc")
+    , ("a", Atom "a")
+    , ("!", Atom "!")
+    , ("$!##@", Atom "$!##@")
+    , ("a++1", Atom "a++1")
+    , ("open/file", Atom "open/file")
+    ]
+
 
 testExpectedExpr :: String -> LispVal -> Maybe String
 testExpectedExpr exprStr expectedVal = case readExpr exprStr of
@@ -47,15 +57,20 @@ testExpectedExpr exprStr expectedVal = case readExpr exprStr of
     Left e -> Just (show e)
 
 
-tcs = map (\(exprStr, val) -> testCase ("Parsing: " ++ exprStr) $
+runList expectedExprs = map (\(exprStr, val) -> testCase ("Parsing: " ++ exprStr) $
             case testExpectedExpr exprStr val of
                 Nothing -> assertBool ("passed") True
                 Just msg -> assertBool ("failed: " ++ msg) False
     ) expectedExprs
 
 
+
+
 testParse = testGroup "Parse" $
     [   testCase "list parse" $
             -- readExpr "1" @?= Right (Number 1)
             assertBool "message" True
-    ] ++ tcs
+    
+    ,   testGroup "parse lists" $ runList expectedExprs
+    ,   testGroup "parse atoms" $ runList testAtoms
+    ] 

@@ -13,7 +13,7 @@ import Parse
 to run tests in stack:
 
 
-stack ghci --test, select Spec.hs, then main
+stack ghci --test, select Spec.hs, then run main
 Type `:r` then `main` to run again on a reload
 
 or:
@@ -34,8 +34,14 @@ expectedExprs =
     , ("(+ 1 2)", List [Atom "+", Number 1, Number 2])
     , ("(+ 1 2 (- 5 3))", List [Atom "+", Number 1, Number 2,
                                           List [Atom "-", Number 5, Number 3]])
+    , ("(* 100 200)", List [Atom "*", Number 100, Number 200])
 
+    , ("(*   100  200 )", List [Atom "*", Number 100, Number 200])
     ]
+
+
+
+singleAtoms = map (\atom -> ([atom], Atom [atom])) "!$%&|*+-/:<=>?@^_~#"
 
 testAtoms = 
     [
@@ -72,5 +78,6 @@ testParse = testGroup "Parse" $
             assertBool "message" True
     
     ,   testGroup "parse lists" $ runList expectedExprs
+    ,   testGroup "parse single atoms" $ runList singleAtoms
     ,   testGroup "parse atoms" $ runList testAtoms
     ] 

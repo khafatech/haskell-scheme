@@ -63,6 +63,7 @@ testExpectedExpr exprStr expectedVal = case readExpr exprStr of
     Left e -> Just (show e)
 
 
+runList :: [([Char], LispVal)] -> [TestTree]
 runList expectedExprs = map (\(exprStr, val) -> testCase ("Parsing: " ++ exprStr) $
             case testExpectedExpr exprStr val of
                 Nothing -> assertBool ("passed") True

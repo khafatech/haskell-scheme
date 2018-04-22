@@ -100,6 +100,7 @@ parseNumberBase parseFunc readFunc = liftM (Number . readFunc) $ many1 parseFunc
 
 -- different ways of writing parseDecNumber.
 -- parseNumber =  (many1 digit)  >>= (\n -> return ((Number . read) n))
+-- TODO - support negative numbers
 parseDecNumber :: Parser LispVal
 parseDecNumber = parseNumberBase digit read
 

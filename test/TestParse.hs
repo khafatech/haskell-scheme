@@ -116,14 +116,22 @@ expectedNumbersLispVals = map (\(str, num) -> (str, Number num)) expectedNumbers
 
 invalidNumbers =
     [
-        "-1-2"
-    ,   "1-0"
+        "#x1fz3f"
+    ,   "0.1"
     ]
 
 
 
+testInvalidExpr :: String -> TestTree
+testInvalidExpr exprStr = testCase ("Parsing invalid " ++ exprStr) $
+    case readExpr exprStr of
+        Right val -> assertBool ("expecting to be unable to parse, but got: " ++ (show val)) False
+        Left _ -> assertBool "passed" True
+
+runListInvalid = map testInvalidExpr
 
 {-
+TODO - refactor testExpectedExpr and runListWith (combine into one?)
 This takes an expression as a string, the the expected value, and tries to parse the string.
 
 If there was an error in parsing, or a mismatch, it returns the error message.
@@ -140,14 +148,17 @@ testExpectedExpr exprStr expectedVal = case readExpr exprStr of
     Left e -> Just (show e)
 
 
-
-runList :: [([Char], LispVal)] -> [TestTree]
-runList expectedExprs = map (\(exprStr, val) -> testCase ("Parsing: " ++ exprStr) $
-            case testExpectedExpr exprStr val of
+-- run a testFunc on a list of input & expected values
+runListWith :: ([Char] -> t -> Maybe [Char]) -> [([Char], t)] -> [TestTree]
+runListWith testFunc expectedExprs = map (\(exprStr, val) -> testCase ("Parsing: " ++ exprStr) $
+            case testFunc exprStr val of
                 Nothing -> assertBool ("passed") True
                 Just msg -> assertBool ("failed: " ++ msg) False
     ) expectedExprs
 
+
+runList :: [([Char], LispVal)] -> [TestTree]
+runList = runListWith testExpectedExpr
 
 
 
@@ -162,4 +173,5 @@ testParse = testGroup "Parse" $
 
     ,   testGroup "parse the rest" $ runList expectedVaues
     ,   testGroup "parse numbers" $ runList expectedNumbersLispVals
+    ,   testGroup "parse invalid numbers" $ runListInvalid invalidNumbers
     ] 
